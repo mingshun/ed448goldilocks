@@ -13,7 +13,7 @@
 
 #define WBITS 64 /* TODO */
 #define LBITS (WBITS * 7 / 8)
-#define DECAF_448_LIMBS (448/LBITS)
+#define X448_LIMBS (448/LBITS)
 
 #if WBITS == 64
 typedef uint64_t decaf_word_t;
@@ -29,9 +29,7 @@ typedef int64_t decaf_sdword_t;
 #error "WBITS must be 32 or 64"
 #endif
 
-typedef struct {
-    decaf_word_t limb[DECAF_448_LIMBS];
-} gf_s, gf[1];
+typedef struct { decaf_word_t limb[X448_LIMBS]; } gf_s, gf[1];
 
 const unsigned char X448_BASE_POINT[X448_BYTES] = {5};
 
@@ -46,40 +44,24 @@ static const gf P = {{{ LMASK,   LMASK, LMASK, LMASK, LMASK, LMASK, LMASK, LMASK
 #endif
 static const int EDWARDS_D = -39081;
 
-#define gf_LITERAL(a,b,c,d,e,f,g,h) {{LIMB(a),LIMB(b),LIMB(c),LIMB(d),LIMB(e),LIMB(f),LIMB(g),LIMB(h)}}
-
-#ifdef __clang__
-#if 100*__clang_major__ + __clang_minor__ > 305
-#define VECTORIZE _Pragma("clang loop unroll(disable) vectorize(enable) vectorize_width(8)")
-#endif
-#endif
-
-#ifndef VECTORIZE
-#define VECTORIZE
-#endif
-
 #if (defined(__OPTIMIZE__) && !defined(__OPTIMIZE_SIZE__)) || defined(DECAF_FORCE_UNROLL)
-    #if DECAF_448_LIMBS==8
+    #if X448_LIMBS==8
     #define FOR_LIMB_U(i,op) { unsigned int i=0; \
        op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; \
     }
-    #elif DECAF_448_LIMBS==16
+    #elif X448_LIMBS==16
     #define FOR_LIMB_U(i,op) { unsigned int i=0; \
        op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; \
        op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; op;i++; \
     }
     #else
-    #define FOR_LIMB_U(i,op) { unsigned int i=0; for (i=0; i<DECAF_448_LIMBS; i++)  { op; }}
+    #define FOR_LIMB_U(i,op) { unsigned int i=0; for (i=0; i<X448_LIMBS; i++)  { op; }}
     #endif
 #else
-#define FOR_LIMB_U(i,op) { unsigned int i=0; for (i=0; i<DECAF_448_LIMBS; i++)  { op; }}
+#define FOR_LIMB_U(i,op) { unsigned int i=0; for (i=0; i<X448_LIMBS; i++)  { op; }}
 #endif
 
-
-#define FOR_LIMB(i,op) { unsigned int i=0; for (i=0; i<DECAF_448_LIMBS; i++)  { op; }}
-
-/* PERF: In the decaf branch this made things horribly slow */
-#define FOR_LIMB_V(i,op) { unsigned int i=0; VECTORIZE for (i=0; i<DECAF_448_LIMBS; i++)  { op; }}
+#define FOR_LIMB(i,op) { unsigned int i=0; for (i=0; i<X448_LIMBS; i++)  { op; }}
 
 /** Copy x = y */
 static void gf_cpy(gf x, const gf y) {
@@ -92,18 +74,18 @@ gf_mul (gf c, const gf a, const gf b) {
     gf aa;
     gf_cpy(aa,a);
     
-    decaf_dword_t accum[DECAF_448_LIMBS] = {0};
+    decaf_dword_t accum[X448_LIMBS] = {0};
     FOR_LIMB_U(i, {
-        FOR_LIMB_U(j,{ accum[(i+j)%DECAF_448_LIMBS] += (decaf_dword_t)b->limb[i] * aa->limb[j]; });
-        aa->limb[(DECAF_448_LIMBS-1-i)^(DECAF_448_LIMBS/2)] += aa->limb[DECAF_448_LIMBS-1-i];
+        FOR_LIMB_U(j,{ accum[(i+j)%X448_LIMBS] += (decaf_dword_t)b->limb[i] * aa->limb[j]; });
+        aa->limb[(X448_LIMBS-1-i)^(X448_LIMBS/2)] += aa->limb[X448_LIMBS-1-i];
     });
     
-    accum[DECAF_448_LIMBS-1] += accum[DECAF_448_LIMBS-2] >> LBITS;
-    accum[DECAF_448_LIMBS-2] &= LMASK;
-    accum[DECAF_448_LIMBS/2] += accum[DECAF_448_LIMBS-1] >> LBITS;
+    accum[X448_LIMBS-1] += accum[X448_LIMBS-2] >> LBITS;
+    accum[X448_LIMBS-2] &= LMASK;
+    accum[X448_LIMBS/2] += accum[X448_LIMBS-1] >> LBITS;
     FOR_LIMB_U(j,{
-        accum[j] += accum[(j-1)%DECAF_448_LIMBS] >> LBITS;
-        accum[(j-1)%DECAF_448_LIMBS] &= LMASK;
+        accum[j] += accum[(j-1)%X448_LIMBS] >> LBITS;
+        accum[(j-1)%X448_LIMBS] &= LMASK;
     });
     FOR_LIMB_U(j, c->limb[j] = accum[j] );
 }
@@ -145,10 +127,10 @@ gf_inv(gf y, const gf x) {
 /** Weak reduce mod p. */
 static void
 gf_reduce(gf x) {
-    x->limb[DECAF_448_LIMBS/2] += x->limb[DECAF_448_LIMBS-1] >> LBITS;
+    x->limb[X448_LIMBS/2] += x->limb[X448_LIMBS-1] >> LBITS;
     FOR_LIMB_U(j,{
-        x->limb[j] += x->limb[(j-1)%DECAF_448_LIMBS] >> LBITS;
-        x->limb[(j-1)%DECAF_448_LIMBS] &= LMASK;
+        x->limb[j] += x->limb[(j-1)%X448_LIMBS] >> LBITS;
+        x->limb[(j-1)%X448_LIMBS] &= LMASK;
     });
 }
 
@@ -215,13 +197,14 @@ static void gf_canon ( gf a ) {
     });
 }
 
+/* Deserialize */
 static decaf_word_t
 gf_deser(gf s, const unsigned char ser[X448_BYTES]) {
     unsigned int i, k=0, bits=0;
     decaf_dword_t buf=0;
     for (i=0; i<X448_BYTES; i++) {
         buf |= (decaf_dword_t)ser[i]<<bits;
-        for (bits += 8; (bits>=LBITS || i==X448_BYTES-1) && k<DECAF_448_LIMBS; bits-=LBITS, buf>>=LBITS) {
+        for (bits += 8; (bits>=LBITS || i==X448_BYTES-1) && k<X448_LIMBS; bits-=LBITS, buf>>=LBITS) {
             s->limb[k++] = buf & LMASK;
         }
     }
@@ -231,6 +214,7 @@ gf_deser(gf s, const unsigned char ser[X448_BYTES]) {
     return accum;
 }
 
+/* Serialize */
 static void
 gf_ser(uint8_t ser[X448_BYTES], gf a) {
     gf_canon(a);
@@ -238,7 +222,7 @@ gf_ser(uint8_t ser[X448_BYTES], gf a) {
     decaf_dword_t buf=0;
     FOR_LIMB(i, {
         buf |= (decaf_dword_t)a->limb[i]<<bits;
-        for (bits += LBITS; (bits>=8 || i==DECAF_448_LIMBS-1) && k<X448_BYTES; bits-=8, buf>>=8) {
+        for (bits += LBITS; (bits>=8 || i==X448_LIMBS-1) && k<X448_BYTES; bits-=8, buf>>=8) {
             ser[k++]=buf;
         }
     });
@@ -309,15 +293,14 @@ int __attribute__((visibility("default"))) x448 (
     }
     nz = (nz-1)>>8; /* 0 = succ, -1 = fail */
     
+    /* TODO: this function acts per the spec to fail 0 and pass all others.
+     * Should we also use the isqrt trick to fail points not on the curve?
+     */
+    
     /* return value: 0 = succ, -1 = fail */
     return ~(succ & ~nz);
 }
 
-/* Returns 0 on success, -1 on failure
- *
- * Same as x448(out,scalar,X448_BASE_POINT), except that
- * an implementation may optimize it.
- */
 int __attribute__((visibility("default")))
 x448_base (
     unsigned char out[X448_BYTES],
