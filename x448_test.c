@@ -1,6 +1,8 @@
 #include "x448.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
 
 void prn(const unsigned char x[X448_BYTES]) {
     int i;
@@ -25,8 +27,23 @@ int expect(
     return 0;
 }
 
+static __inline__ void __attribute__((unused)) ignore_result ( int result ) { (void)result; }
+static double now(void) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec + tv.tv_usec/1000000.0;
+}
+
 int main(int argc, char **argv) {
-    (void)argc; (void)argv;
+    
+    int ntests = 10000;
+    if (argc == 2) {
+        ntests = atoi(argv[1]);
+    }
+    if (argc > 2 || ntests < 0) {
+        printf("Error: usage: %s [ntests]\n", argv[0] ? argv[0] : "[progName]");
+        return 1;
+    }
     
     const unsigned char
         scalar1[X448_BYTES] = {
@@ -157,9 +174,12 @@ int main(int argc, char **argv) {
     ret |= x448(out,alicePriv,bobPub);
     ret |= expect(out,aliceBob);
     
-    int ntests = 10000, i;
+    int i;
     memcpy(sa,alicePub,sizeof(sa));
     memcpy(sb,bobPub,sizeof(sb));
+
+    double start = now();
+    
     for (i=0; i<ntests; i++) {
         ret |= x448_base(pa,sa);
         ret |= x448_base(pb,sb);
@@ -170,8 +190,12 @@ int main(int argc, char **argv) {
         memcpy(sb,pb,sizeof(sb));
     }
     
+    double end = now();
+    
     if (ret) printf("Tests failed!\n");
     else printf("Tests passed!\n");
+    
+    printf("Bench: %0.3f ms/call\n", (end-start)*1000/(4*ntests));
     
     return ret;
 }

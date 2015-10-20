@@ -9,7 +9,6 @@
  */
 
 #include <stdint.h>
-#include <assert.h>
 #include "x448.h"
 
 #define WBITS 64 /* TODO */
@@ -306,7 +305,7 @@ int __attribute__((visibility("default"))) x448 (
     
     decaf_sword_t nz = 0;
     for (t=0; t<X448_BYTES; t++) {
-        nz ^= out[t];
+        nz |= out[t];
     }
     nz = (nz-1)>>8; /* 0 = succ, -1 = fail */
     
