@@ -1,5 +1,5 @@
 
-#define X448_BYTES (448/8) /* TODO: move to header */
+#define X448_BYTES (448/8)
 
 /* The base point (5) */
 extern const unsigned char X448_BASE_POINT[X448_BYTES];
