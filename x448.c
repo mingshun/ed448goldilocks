@@ -234,7 +234,7 @@ int __attribute__((visibility("default"))) x448 (
     const unsigned char base[X448_BYTES]
 ) {
     gf x1, x2, z2, x3, z3, t1, t2;
-    decaf_word_t succ = gf_deser(x1,base);
+    gf_deser(x1,base);
     gf_cpy(x2,ONE);
     gf_cpy(z2,ZERO);
     gf_cpy(x3,x1);
@@ -293,12 +293,8 @@ int __attribute__((visibility("default"))) x448 (
     }
     nz = (nz-1)>>8; /* 0 = succ, -1 = fail */
     
-    /* TODO: this function acts per the spec to fail 0 and pass all others.
-     * Should we also use the isqrt trick to fail points not on the curve?
-     */
-    
     /* return value: 0 = succ, -1 = fail */
-    return ~(succ & ~nz);
+    return nz;
 }
 
 int __attribute__((visibility("default")))
