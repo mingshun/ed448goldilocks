@@ -1,9 +1,9 @@
-/* Copyright (c) 2015 Cryptography Research, Inc.
+/* Copyright (c) 2015-2017 Cryptography Research, Inc.
  * Released under the MIT License.  See LICENSE.txt for license information.
  */
 
 /**
- * @file decaf.c
+ * @file x448.c
  * @author Mike Hamburg
  * @brief Decaf high-level functions.
  */
