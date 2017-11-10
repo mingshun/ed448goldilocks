@@ -49,9 +49,9 @@ static const scalar_t point_scalarmul_adjustment = {{{
 const uint8_t decaf_x25519_base_point[DECAF_X25519_PUBLIC_BYTES] = { 0x09 };
 
 #define RISTRETTO_FACTOR DECAF_255_RISTRETTO_FACTOR
-const gf RISTRETTO_FACTOR = {{{
+const gf RISTRETTO_FACTOR = {FIELD_LITERAL(
     0x702557fa2bf03, 0x514b7d1a82cc6, 0x7f89efd8b43a7, 0x1aef49ec23700, 0x079376fa30500
-}}};
+)};
 
 #if IMAGINE_TWIST
 #define TWISTED_D (-(EDWARDS_D))
