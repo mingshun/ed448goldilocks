@@ -305,7 +305,7 @@ public:
     */
     inline explicit Point(const FixedBlock<SER_BYTES> &buffer, bool allow_identity=true)
         /*throw(CryptoException)*/ {
-        if (DECAF_SUCCESS != decode(buffer,allow_identity ? DECAF_TRUE : DECAF_FALSE)) {
+        if (DECAF_SUCCESS != decode(buffer,allow_identity)) {
             throw CryptoException();
         }
     }
